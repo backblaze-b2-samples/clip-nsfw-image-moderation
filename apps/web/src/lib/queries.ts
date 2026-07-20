@@ -3,14 +3,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
+  deleteBatch,
   deleteFile,
+  getBatch,
+  getBatches,
   getFiles,
   getFileStats,
   getHealth,
+  getModerationStats,
   getPreviewUrl,
   getUploadActivity,
+  runBatch,
+  updateBatch,
 } from "@/lib/api-client";
-import type { FileMetadata } from "@vibe-coding-starter-kit/shared";
+import type {
+  BatchDetail,
+  BatchSummary,
+  FileMetadata,
+  ModerationStats,
+} from "@clip-nsfw-image-moderation/shared";
 
 // Single source of truth for query keys. Keep these tightly scoped so that
 // invalidating "files" doesn't blow away unrelated caches, and so an IDE
@@ -24,6 +35,9 @@ export const qk = {
     [...qk.all, "stats", "activity", days] as const,
   preview: (key: string) => [...qk.all, "preview", key] as const,
   health: () => [...qk.all, "health"] as const,
+  batches: () => [...qk.all, "batches"] as const,
+  batch: (id: string) => [...qk.all, "batches", id] as const,
+  moderationStats: () => [...qk.all, "batches", "stats"] as const,
 };
 
 export type Health = Awaited<ReturnType<typeof getHealth>>;
@@ -84,5 +98,54 @@ export function useDeleteFile() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.all });
     },
+  });
+}
+
+// --- Moderation batches ---
+
+export function useBatches() {
+  return useQuery<BatchSummary[], ApiError>({
+    queryKey: qk.batches(),
+    queryFn: getBatches,
+  });
+}
+
+export function useModerationStats() {
+  return useQuery<ModerationStats, ApiError>({
+    queryKey: qk.moderationStats(),
+    queryFn: getModerationStats,
+  });
+}
+
+export function useBatch(id: string | undefined) {
+  return useQuery<BatchDetail, ApiError>({
+    queryKey: qk.batch(id ?? ""),
+    queryFn: () => getBatch(id as string),
+    enabled: !!id,
+  });
+}
+
+export function useUpdateBatch(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: { name?: string; threshold?: number }) =>
+      updateBatch(id, patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.all }),
+  });
+}
+
+export function useDeleteBatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteBatch(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.all }),
+  });
+}
+
+export function useRunBatch(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => runBatch(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.all }),
   });
 }

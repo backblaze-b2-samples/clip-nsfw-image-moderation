@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
-  Upload,
+  ShieldCheck,
   FolderOpen,
   Settings,
   Sparkles,
@@ -25,7 +25,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { getFiles } from "@/lib/api-client";
-import type { FileMetadata } from "@vibe-coding-starter-kit/shared";
+import type { FileMetadata } from "@clip-nsfw-image-moderation/shared";
 
 interface CommandPaletteProps {
   open: boolean;
@@ -34,8 +34,9 @@ interface CommandPaletteProps {
 
 const routes = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Upload", href: "/upload", icon: Upload },
-  { label: "Files", href: "/files", icon: FolderOpen },
+  { label: "Batches", href: "/batches", icon: ShieldCheck },
+  { label: "New batch", href: "/batches/new", icon: ShieldCheck },
+  { label: "Bucket", href: "/files", icon: FolderOpen },
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Design System", href: "/design", icon: Sparkles },
 ];

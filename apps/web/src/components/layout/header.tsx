@@ -26,8 +26,9 @@ import { APP_NAME } from "@/lib/app-config";
 // (e.g. "/" -> "Dashboard", "/design" -> "Design System").
 const pageTitles: Record<string, string> = {
   "/": "Dashboard",
-  "/upload": "Upload",
-  "/files": "Files",
+  "/batches": "Batches",
+  "/batches/new": "New Batch",
+  "/files": "Bucket",
   "/settings": "Settings",
   "/design": "Design System",
 };

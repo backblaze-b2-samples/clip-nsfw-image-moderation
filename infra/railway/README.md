@@ -24,11 +24,14 @@ Set these on the API service:
 
 | Variable | Value |
 |----------|-------|
-| `B2_ENDPOINT` | Your B2 S3 endpoint |
-| `B2_KEY_ID` | Your B2 key ID |
-| `B2_APPLICATION_KEY` | Your B2 key |
+| `B2_APPLICATION_KEY_ID` | Your B2 key ID |
+| `B2_APPLICATION_KEY` | Your B2 application key |
 | `B2_BUCKET_NAME` | Your bucket name |
+| `B2_REGION` | Your bucket's region, e.g. `us-west-004` (the S3 endpoint is derived as `https://s3.{B2_REGION}.backblazeb2.com`) |
 | `API_CORS_ORIGINS` | Your web service URL (e.g., `https://web-production-xxx.up.railway.app`) |
+
+> Heads up: this app runs PyTorch + TensorFlow for on-device scoring. Size the API
+> service accordingly, or run scoring where a GPU/large CPU is available.
 
 Set this on the Web service:
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FolderOpen, RefreshCw, Upload } from "lucide-react";
+import { FolderOpen, RefreshCw, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +24,7 @@ import { FileTreeRow } from "./file-tree-row";
 import { ApiError, getDownloadUrl } from "@/lib/api-client";
 import { useDeleteFile, useFiles } from "@/lib/queries";
 import { buildFileTree, type TreeFolder } from "@/lib/file-tree";
-import type { FileMetadata } from "@vibe-coding-starter-kit/shared";
+import type { FileMetadata } from "@clip-nsfw-image-moderation/shared";
 
 export function FileBrowser() {
   const { data: files = [], isLoading, isFetching, error, refetch } = useFiles();
@@ -139,12 +139,12 @@ export function FileBrowser() {
             <EmptyState
               icon={FolderOpen}
               title="This bucket is empty"
-              description="Upload some files to see them listed here."
+              description="Create a moderation batch to ingest images and populate the bucket."
               action={
                 <Button asChild size="sm">
-                  <Link href="/upload">
-                    <Upload aria-hidden="true" className="h-3.5 w-3.5" />
-                    Upload files
+                  <Link href="/batches/new">
+                    <Plus aria-hidden="true" className="h-3.5 w-3.5" />
+                    New batch
                   </Link>
                 </Button>
               }

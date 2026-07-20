@@ -1,38 +1,60 @@
-<!-- last_verified: 2026-03-10 -->
+<!-- last_verified: 2026-07-20 -->
 # App Workflows
 
 User journeys inside the application.
 
-## Upload Files
+## Create a Moderation Batch
 
-- User navigates to `/upload`
-- Drops or selects files in the dropzone
-- Client validates file size (max 100MB) and type
-- Progress bar shows per-file upload status
-- On success: toast notification, green checkmark
-- On failure: red status icon with error message
-- User can clear completed uploads
-- See: [File Upload](features/file-upload.md)
+- User navigates to `/batches/new`
+- Enters a batch name (placeholder suggests e.g. `ugc-batch-2026-07-20`)
+- Picks a **safety threshold** from a selector — Strict (0.50), Balanced (0.70,
+  default), or Lenient (0.90). A description explains that an image is
+  quarantined when its score is `>= threshold`
+- Drops or selects images (JPEG/PNG/GIF/WebP) into the dropzone
+- On submit, images are ingested to `images/incoming/<batch-id>/` with a manifest
+  and the user lands on the batch detail page
+- See: [Moderation Batches](features/moderation-batches.md)
 
-## Browse and Manage Files
+## Run a Batch (score → route → audit)
 
-- User navigates to `/files`
-- Page loads file list from API (sorted most recent first)
-- Files displayed in tree view with folders and type-specific icons
-- Top-level folders auto-expand on load
-- Hover a file row to see action buttons (preview / download / delete)
-- **Preview**: opens dialog with image/PDF preview + metadata panel
-- **Download**: fetches presigned URL, browser downloads file
-- **Delete**: removes file from B2, row removed from tree, toast confirms
-- Empty bucket shows "No files found" with upload prompt
+- On `/batches/[id]`, user clicks **Run scoring**
+- The API loads every image from B2, scores it on-device (CLIP + LAION), then
+  routes it: safe → `images/approved/<id>/`, flagged → `images/quarantine/<id>/`
+  (copy-then-delete; incoming originals removed after routing)
+- Per-image `results.jsonl` and a batch `summary.csv` are written under
+  `moderation/logs/<id>/`
+- The detail view refreshes with per-image score, verdict badge, and thumbnail;
+  a toast reports totals
+- Re-running after editing the threshold re-routes with the new cutoff
+- See: [NSFW Scoring](features/nsfw-scoring.md), [Routing & Quarantine](features/routing-quarantine.md), [Audit Logs](features/audit-logs.md)
+
+## Edit / Delete a Batch
+
+- **Edit**: `/batches/[id]/edit` opens pre-filled with the batch's name and
+  current threshold. Saving issues `PATCH /batches/{id}`
+- **Delete**: from the batch detail action panel, a confirm dialog runs a scoped
+  delete that removes only this batch's four prefixes (incoming, approved,
+  quarantine, logs) — never other batches' data
+
+## Browse Batches
+
+- User navigates to `/batches`
+- Table lists every batch: name, status, image count, threshold, approved vs.
+  quarantined counts, created date. Row links to the detail page
+- Empty state offers a "New batch" action
+
+## Inspect the Raw Bucket
+
+- User navigates to `/files` (the "Bucket" explorer)
+- Full-bucket tree view across every prefix the pipeline produces
+  (`images/**`, `moderation/**`), with preview / download / delete per object
+- Useful for verifying the exact object layout the pipeline writes
 - See: [File Browser](features/file-browser.md)
 
 ## View Dashboard
 
 - User navigates to `/` (home)
-- Three parallel API calls load: stats, recent files, upload activity
-- Stats cards show: total files, storage used, uploads today, total downloads
-- Upload chart shows last 7 days of upload activity as bar chart
-- Recent uploads table shows last 10 files with filename, size, type, date
-- Empty state: "No files uploaded yet" messages
+- Stats cards show: total batches, images scored, approved, quarantined
+- Recent batches table shows the most recent batches with status and image count
+- Empty state: "No batches yet"
 - See: [Dashboard](features/dashboard.md)

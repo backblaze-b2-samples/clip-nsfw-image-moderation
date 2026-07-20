@@ -1,16 +1,15 @@
 "use client";
 
-import { FileIcon, HardDrive, Upload, Download } from "lucide-react";
+import { Layers, ScanEye, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { useFileStats } from "@/lib/queries";
+import { useModerationStats } from "@/lib/queries";
 
 export function StatsCards() {
-  const { data: stats, isLoading, error, refetch } = useFileStats();
+  const { data: stats, isLoading, error, refetch } = useModerationStats();
 
-  // Surface fetch failures inline rather than rendering "0 files / 0 B" —
-  // that lies to the user about the bucket state when really the API is
+  // Surface fetch failures inline rather than lying with zeros when the API is
   // just unreachable.
   if (error) {
     return (
@@ -23,10 +22,10 @@ export function StatsCards() {
   }
 
   const cards = [
-    { title: "Total Files", value: stats?.total_files ?? 0, icon: FileIcon },
-    { title: "Storage Used", value: stats?.total_size_human ?? "0 B", icon: HardDrive },
-    { title: "Uploads Today", value: stats?.uploads_today ?? 0, icon: Upload },
-    { title: "Total Downloads", value: stats?.total_downloads ?? 0, icon: Download },
+    { title: "Batches", value: stats?.total_batches ?? 0, icon: Layers },
+    { title: "Images Scored", value: stats?.images_scored ?? 0, icon: ScanEye },
+    { title: "Approved", value: stats?.approved ?? 0, icon: ShieldCheck },
+    { title: "Quarantined", value: stats?.quarantined ?? 0, icon: ShieldAlert },
   ];
 
   return (

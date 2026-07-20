@@ -1,11 +1,19 @@
-<!-- last_verified: 2026-06-26 -->
-# Feature: File Browser
+<!-- last_verified: 2026-07-20 -->
+# Feature: File Browser (Bucket explorer)
 
 ## Purpose
-List, preview, download, and delete files stored in Backblaze B2.
+List, preview, download, and delete **every** object in the B2 bucket — the raw
+full-bucket inspector. This is inherited starter scaffolding and is kept as-is so
+an operator can verify the exact object layout the moderation pipeline produces
+(`images/**` and `moderation/**`).
+
+> Day-to-day work happens in the **scoped Batches explorer** (`/batches`), which
+> is restricted to the pipeline's own prefixes and understands batches, scores,
+> and verdicts. The `/files` bucket explorer here is the unrestricted raw view of
+> the whole bucket. Both ship; see [Moderation Batches](moderation-batches.md).
 
 ## Used By
-- UI: `/files` page, file browser component
+- UI: `/files` page (labelled "Bucket"), file browser component
 - API: `GET /files`, `GET /files-by-key/metadata?key=...`, `GET /files-by-key/download?key=...`, `GET /files-by-key/preview?key=...`, `DELETE /files-by-key?key=...`
 - Legacy API: `GET /files/{key}`, `GET /files/{key}/download`, `GET /files/{key}/preview`, `DELETE /files/{key}`
 
@@ -55,11 +63,11 @@ List, preview, download, and delete files stored in Backblaze B2.
 - Invalid file key (traversal attempt, empty key) → API returns 400
 - File key contains `/`, spaces, `#`, `?`, `%`, reserved route names, or suffixes like `/download` and `/preview` → web client sends the key as a query parameter before calling get/download/preview/delete routes
 - B2 unreachable → persistent error state with retry
-- Empty bucket → upload prompt with direct Upload action
+- Empty bucket → prompt with a direct "New batch" action
 - Delete failure → API returns 500, toast error
 
 ## UX States
-- Empty: centered message with upload prompt and Upload action
+- Empty: centered message with a "New batch" action
 - Loading: skeleton rows
 - Error: inline error state with Retry
 - Loaded: tree view with expand/collapse folders and focus/hover action menus

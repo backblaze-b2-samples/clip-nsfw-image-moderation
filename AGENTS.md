@@ -8,28 +8,31 @@ This is the authoritative control surface for all coding agents. Read this first
 ```
 apps/web/          Next.js 16 frontend (App Router, Tailwind v4, shadcn/ui)
 services/api/      FastAPI backend (layered: types/config/repo/service/runtime)
+                     app/moderation/  on-device CLIP + LAION NSFW scorer
 packages/shared/   Shared TypeScript types
 docs/              System of record (features, workflows, security, reliability)
 docs/exec-plans/   Execution plans and tech debt tracker
 infra/railway/     Deployment config
 ```
 
-## 2. Building on This Starter Kit
+## 2. Building on This Project
 
-When this repo is used as the foundation for a new app, the following pieces are part of the starter contract — keep them. Adapt only what the new use case actually requires.
+This app is built on the vibe-coding-starter-kit. The following pieces are inherited scaffolding — keep them. Adapt only what the moderation use case requires.
 
 **Keep as-is (do not strip, rename, or replace)**
 - **UI kit / design system.** `apps/web/src/components/ui/` (shadcn primitives), the design tokens in `apps/web/src/app/globals.css`, and the `/design` reference page. Build new screens with these primitives; never edit the generated `components/ui/` files directly. Restyling happens through tokens in `globals.css`.
-- **File Explorer.** `/files` route, `apps/web/src/app/files/`, and `apps/web/src/components/files/`. The Files sidebar entry in `apps/web/src/components/layout/app-sidebar.tsx` stays.
-- **Upload.** `/upload` route, `apps/web/src/app/upload/`, and `apps/web/src/components/upload/`. The Upload sidebar entry stays.
-- The sidebar nav itself (Dashboard, Upload, Files, Settings, plus the Design System utility link).
+- **Bucket explorer.** `/files` route, `apps/web/src/app/files/`, and `apps/web/src/components/files/`. This is the raw full-bucket explorer and is never removable — it lets an operator inspect every object the pipeline produces. The "Bucket" sidebar entry stays.
+- **Backend layering + B2 plumbing.** `repo/b2_client.py` (cached S3 client, pagination, presign) and the health/metrics/ratelimit runtime scaffolding.
 
-**Adapt to the new use case**
-- **Dashboard.** `/` route and `apps/web/src/components/dashboard/` (stats cards, upload chart, recent uploads table) are illustrative defaults. Replace them with metrics, charts, and tables that reflect what the new app actually does (e.g. transcripts processed, embeddings indexed, classifications run). New aggregations must flow through the same `runtime -> service -> repo` layering and be exposed via TanStack Query hooks in `apps/web/src/lib/queries.ts` — no bare `useEffect + fetch`.
-- Update `docs/features/dashboard.md` in the same PR as any dashboard change (see §9).
+**Primary feature (this app's reason to exist)**
+- **Moderation batches** — the primary entity, with all five UI verbs: create (`/batches/new`), read (`/batches`, `/batches/[id]`), edit (`/batches/[id]/edit`), delete, and run. Routes in `runtime/batches.py`; CRUD in `service/batches.py`; the score/route/audit run pipeline in `service/moderation.py`; the on-device engine in `app/moderation/`.
+- **On-device scoring** — CLIP ViT-L/14 + LAION AutoKeras classifier. CPU-default with CUDA → Apple MPS → CPU autodetect for the CLIP stage; the TF classifier always runs on CPU. Never hard-require a GPU.
+
+**Adapt**
+- **Dashboard.** `/` route and `apps/web/src/components/dashboard/` show moderation stats and recent batches. New aggregations flow through the same `runtime -> service -> repo` layering and are exposed via TanStack Query hooks in `apps/web/src/lib/queries.ts` — no bare `useEffect + fetch`. Update `docs/features/dashboard.md` in the same PR as any dashboard change (see §9).
 
 **Why this contract exists**
-- The UI kit, Files, and Upload pages are the reusable B2-backed scaffolding that makes this a starter kit — stripping them defeats the purpose. The dashboard is the only screen explicitly designed to be rewritten per app.
+- The UI kit and the full-bucket explorer are the reusable B2-backed scaffolding. The dashboard is designed to be rewritten per app. Everything under `batches/` and `moderation/` is this app's own feature surface.
 
 ## 3. Architectural Invariants
 

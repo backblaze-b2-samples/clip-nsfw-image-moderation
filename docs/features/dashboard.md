@@ -1,53 +1,49 @@
-<!-- last_verified: 2026-06-25 -->
+<!-- last_verified: 2026-07-20 -->
 # Feature: Dashboard
 
 ## Purpose
-Provide an at-a-glance overview of file storage usage and recent upload activity.
+Provide an at-a-glance overview of moderation activity across all batches.
 
 ## Used By
 - UI: `/` page (dashboard home)
-- API: `GET /files/stats`, `GET /files`, `GET /files/stats/activity`
+- API: `GET /batches/stats`, `GET /batches`
 
 ## Core Functions
-- `apps/web/src/components/dashboard/stats-cards.tsx` — 4 stat cards
-- `apps/web/src/components/dashboard/recent-uploads-table.tsx` — last 10 uploads
-- `apps/web/src/components/dashboard/upload-chart.tsx` — bar chart of uploads per day
-- `apps/web/src/lib/api-client.ts` — `getFileStats()`, `getFiles()`, `getUploadActivity()`
-- `services/api/app/runtime/files.py` — `GET /files/stats` handler
-- `services/api/app/service/files.py` — `get_stats()` business logic
-- `services/api/app/repo/b2_client.py` — `get_upload_stats()` data access
+- `apps/web/src/components/dashboard/stats-cards.tsx` — 4 moderation stat cards
+- `apps/web/src/components/dashboard/recent-batches-table.tsx` — recent batches
+- `apps/web/src/lib/queries.ts` — `useModerationStats()`, `useBatches()`
+- `services/api/app/runtime/batches.py` — `GET /batches/stats` handler
+- `services/api/app/service/batches.py` — `get_moderation_stats()` business logic
 
 ## Canonical Files
-- Dashboard page layout: `apps/web/src/components/dashboard/stats-cards.tsx`
-- Stats service logic: `services/api/app/service/files.py`
+- Stat cards: `apps/web/src/components/dashboard/stats-cards.tsx`
+- Stats service logic: `services/api/app/service/batches.py`
 
 ## Inputs
 - None (dashboard loads data automatically)
 
 ## Outputs
-- `GET /files/stats` → `UploadStats` (total_files, total_size_bytes, total_size_human, uploads_today, total_downloads)
-- `GET /files` (limit 10) → `FileMetadata[]` for recent uploads table (sorted newest-first)
-- `GET /files/stats/activity?days=7` → `DailyUploadCount[]` for chart (server-side aggregation)
+- `GET /batches/stats` → `ModerationStats` (total_batches, pending_batches, images_scored, approved, quarantined)
+- `GET /batches` → `BatchSummary[]` for the recent-batches table (sorted newest-first)
 
 ## Flow
-- Page loads → three parallel API calls (stats, recent files, upload activity)
-- Stats cards display total files, storage used, uploads today, total downloads
-- Upload chart displays server-aggregated daily counts for last 7 days as bar chart after activity data is known
-- Recent uploads table shows last 10 files with filename, size, type, date, status badge
+- Page loads → two API calls (moderation stats, batch list)
+- Stat cards display total batches, images scored, approved, quarantined
+- Recent batches table shows the most recent batches with name, status, image count, created date
 
 ## Edge Cases
-- API unavailable → error states with retry where supported; activity chart does not show a false zero state while loading
-- No files uploaded → empty chart message, empty table message
-- Large file count → stats endpoint paginates through all objects using `ContinuationToken`
+- API unavailable → inline error state with retry (no false zeros)
+- No batches yet → empty stat values (0) and an empty-table message
+- Many batches → stats aggregate across all manifests (repo paginates listings)
 
 ## UX States
-- Loading: skeleton placeholders for cards, table, and upload activity chart
-- Empty: "No files uploaded yet" / "No upload data available yet"
-- Loaded: populated cards, chart, table
+- Loading: skeleton placeholders for cards and table
+- Empty: "No batches yet"
+- Loaded: populated cards and table
 
 ## Verification
-- Test files: `services/api/tests/test_upload_activity.py`, `services/api/tests/test_recent_files.py`
-- Required cases: stats with files, stats with empty bucket, API error fallback
+- Test files: `services/api/tests/test_batches.py`
+- Required cases: stats across batches, empty state, API error fallback
 - Quick verify command: `pnpm test:api`
 - Full verify command: `pnpm lint && pnpm lint:api && pnpm test:api && pnpm check:structure`
 - Pass criteria: all pytest tests green, no ruff violations

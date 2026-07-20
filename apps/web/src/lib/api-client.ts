@@ -1,9 +1,14 @@
 import type {
+  BatchCreateResult,
+  BatchDetail,
+  BatchRunResult,
+  BatchSummary,
   DailyUploadCount,
   FileMetadata,
   FileUploadResponse,
+  ModerationStats,
   UploadStats,
-} from "@vibe-coding-starter-kit/shared";
+} from "@clip-nsfw-image-moderation/shared";
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -207,5 +212,81 @@ export function uploadFile(
 
     xhr.open("POST", `${API_BASE}/upload`);
     xhr.send(formData);
+  });
+}
+
+// --- Moderation batches ---
+
+export async function getBatches() {
+  return apiFetch<BatchSummary[]>("/batches");
+}
+
+export async function getModerationStats() {
+  return apiFetch<ModerationStats>("/batches/stats");
+}
+
+export async function getBatch(id: string) {
+  return apiFetch<BatchDetail>(`/batches/${encodeURIComponent(id)}`);
+}
+
+export function createBatch(
+  name: string,
+  threshold: number,
+  files: File[],
+  onProgress?: (percent: number) => void,
+): Promise<BatchCreateResult> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("threshold", String(threshold));
+    for (const file of files) formData.append("files", file);
+
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    });
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText));
+      } else {
+        try {
+          const body = JSON.parse(xhr.responseText);
+          reject(new ApiError(body.detail || `Create failed: ${xhr.status}`, xhr.status));
+        } catch {
+          reject(new ApiError(`Create failed: ${xhr.status}`, xhr.status));
+        }
+      }
+    });
+    xhr.addEventListener("error", () => reject(networkError()));
+    xhr.addEventListener("abort", () => reject(new ApiError("Upload aborted", 0)));
+
+    xhr.open("POST", `${API_BASE}/batches`);
+    xhr.send(formData);
+  });
+}
+
+export async function updateBatch(
+  id: string,
+  patch: { name?: string; threshold?: number },
+) {
+  return apiFetch<BatchSummary>(`/batches/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteBatch(id: string) {
+  return apiFetch<{ deleted: boolean; id: string; objects_removed: number }>(
+    `/batches/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function runBatch(id: string) {
+  return apiFetch<BatchRunResult>(`/batches/${encodeURIComponent(id)}/run`, {
+    method: "POST",
   });
 }

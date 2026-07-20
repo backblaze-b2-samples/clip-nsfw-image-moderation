@@ -7,6 +7,8 @@ Known tech debt items. Agents update this when they discover or create tech debt
 
 | Description | Impact | Proposed Resolution | Priority |
 |---|---|---|---|
+| TensorFlow 2.15 + AutoKeras load path is fragile on macOS arm64 | The LAION classifier load can hang/fail in-process on some arm64 wheels; scoring is unavailable when it does | Fall back to a native `linux/arm64` container for the scorer (as done for prior paddleocr/deoldify samples); keep the pinned known-good versions in `requirements.txt` | Medium |
+| Batch run is synchronous (blocks the request until scoring completes) | Large batches hold a request/threadpool slot for the whole run | Move `run_batch` to a background task/queue and poll status; the manifest already tracks status | Medium |
 | Download counter & `/metrics` not durable across restart/replicas | Counter resets on redeploy (ephemeral FS); both fragment across replicas | Back the counter with a shared store (Redis/DB); label/aggregate metrics per instance. Relocated to `repo/counter.py` and documented in RELIABILITY.md | Medium |
 | Upload buffers the whole file in memory | ~3× file size RAM per upload; large files strain the server (event loop no longer blocked, but memory unbounded) | Stream to a temp file, or S3 multipart above a size threshold | Medium |
 | `get_upload_activity` re-materializes `FileMetadata` for every object just to bucket dates | Wasted O(n) CPU per `/files/stats/activity` (scan is cached; materialization is not) | Aggregate from raw listing dicts like `get_upload_stats` does | Low |

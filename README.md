@@ -1,96 +1,58 @@
-<!-- last_verified: 2026-07-15 -->
-# Vibe Coding Starter Kit
+<!-- last_verified: 2026-07-20 -->
+# CLIP NSFW Image Moderation
 
-Stop wiring boilerplate and start building. This open-source starter kit gives vibe coders and AI coding agents a production-ready foundation — a full-stack TypeScript + Python template with a pre-built dashboard UI, file upload system, and **[Backblaze B2](https://www.backblaze.com/sign-up/ai-cloud-storage?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-oss-start)** cloud storage already integrated. Save thousands of tokens on setup prompts, skip the "build me a dashboard from scratch" loop, and go straight to building your app's unique features.
+A self-hosted, **on-device** content-moderation pipeline for UGC platforms,
+social networks, and dataset marketplaces that ingest large volumes of
+user-submitted or crawled images. It scores every image 0–1 (1 = NSFW) using
+**[LAION-AI's CLIP-based NSFW Detector](https://github.com/LAION-AI/CLIP-based-NSFW-Detector)**
+— CLIP (ViT-L/14) image embeddings fed into LAION's trained AutoKeras safety
+classifier — so image bytes **never leave your infrastructure** for a
+third-party moderation API. **[Backblaze B2](https://www.backblaze.com/sign-up/ai-cloud-storage?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-clip-nsfw-moderation)**
+is the staging, routing, quarantine, and audit-log store for the whole flow.
+
+No second API key — **B2 credentials only.**
 
 **What you get out of the box:**
+- On-device NSFW scoring (CLIP ViT-L/14 + LAION AutoKeras classifier), CPU by
+  default with CUDA → Apple MPS → CPU autodetect
+- Moderation batches: ingest → score → automatic routing → audit logs on B2
 - Full-stack dashboard UI (Next.js 16 + React 19 + Tailwind v4 + shadcn/ui)
-- File upload with drag-and-drop, progress tracking, and metadata extraction
-- File browser with preview, download, and delete
+- A scoped **Batches** explorer plus the raw full-bucket **Bucket** explorer
 - FastAPI backend with strict layered architecture and structural tests
-- Agent-optimized docs — your AI coding agent can read the repo and start contributing immediately
 
-## What it looks like
-
-**Dashboard** — stats, upload activity, and recent uploads at a glance:
-
-![Dashboard view showing stat cards, upload activity chart, and recent uploads table](docs/images/b2-starterkit-dashboard1.png)
-
-**File browser** — tree view with preview, download, and delete:
-
-![File browser view showing a tree of files with hover actions](docs/images/b2-starterkit-fileview2.png)
-
-## Agent-First Architecture
-
-This repo is optimized for coding agents. Use the template, point your agent at it, and start building.
-
-The structure follows the principle that **repository knowledge is the system of record**. Anything an agent can't access in-context doesn't exist — so everything it needs to reason about the codebase is versioned, co-located, and discoverable from the repo itself.
-
-### How it works
-
-**[AGENTS.md](AGENTS.md) is the single source of truth for all coding agents.** A ~100 line entry point gives agents the repository layout, architectural invariants, commands, conventions, and pointers to deeper docs. Agent-specific files (CLAUDE.md, etc.) are thin pointers back to AGENTS.md.
-
-**Architecture is enforced mechanically, not by convention.** Layering rules, import boundaries, file size limits, and SDK containment are verified by structural tests and lints that run on every change. When rules are enforceable by code, agents follow them reliably.
-
-**The knowledge base is structured for progressive disclosure:**
+## How it works
 
 ```
-AGENTS.md              Single source of truth — layout, invariants, commands, conventions
-ARCHITECTURE.md        System layout, layering rules, data flows
-docs/
-  features/            Feature docs (inputs, outputs, flows, edge cases)
-  app-workflows.md     User journeys
-  dev-workflows.md     Engineering workflows and testing
-  SECURITY.md          Security principles
-  RELIABILITY.md       Reliability expectations
-  exec-plans/          Execution plans and tech debt tracker
+images/incoming/<batch-id>/<filename>     # 1. ingest images + manifest
+        │
+        ▼  CLIP embedding → LAION classifier → score 0..1  (on-device)
+        │
+   score >= threshold ?
+     yes ├─────────────► images/quarantine/<batch-id>/<filename>
+      no └─────────────► images/approved/<batch-id>/<filename>
+        │
+        ▼
+moderation/logs/<batch-id>/results.jsonl  # per-image {key, score, verdict}
+moderation/logs/<batch-id>/summary.csv    # batch totals + threshold + run ts
 ```
 
-### Key design decisions
+An image is **quarantined** when its score is `>= threshold`, so a *lower*
+threshold quarantines more aggressively. Three presets ship: **Strict (0.50)**,
+**Balanced (0.70, default)**, and **Lenient (0.90)**.
 
-| Principle | Implementation |
-|-----------|---------------|
-| Give agents a single source of truth | AGENTS.md ~100 lines — layout, invariants, commands, conventions |
-| Enforce invariants mechanically | Structural tests + ruff + ESLint verify boundaries |
-| DRY documentation | Each fact lives in one place; no redundant files to drift |
-| Strict layered architecture | `types -> config -> repo -> service -> runtime`, enforced by tests |
-| Prefer boring, composable libraries | stdlib logging over frameworks, Pydantic over ad-hoc validation |
-| Contain external SDKs | `boto3` only in `repo/` layer — verified by structural test |
-| Keep files agent-sized | 300-line limit per file, enforced by test |
-| Docs updated with code | Same-PR requirement prevents documentation rot |
-| Structured observability | JSON logging, `/metrics` endpoint, request tracing |
+## B2 as the storage layer
 
-This approach draws from [OpenAI's experience building with Codex](https://openai.com/index/harness-engineering/): agents work best in environments with strict boundaries, predictable structure, and progressive context disclosure.
+All access is the **S3-compatible API** via `boto3` (no b2-native SDK), with a
+custom `user_agent_extra` of `b2ai-clip-nsfw-moderation` on the S3 client. B2 is
+used for every stage: ingest (`put_object`), scoring reads (`get_object`),
+routing (`copy_object` + `delete_object`), audit exports (`put_object`), and
+listing (`list_objects_v2`). Quarantined images are retained under
+`images/quarantine/` for human review.
 
 ## Quick Start
 
-You need: Node.js >= 20, pnpm >= 9, Python >= 3.11, and a free **[Backblaze B2 account](https://www.backblaze.com/sign-up/ai-cloud-storage?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-oss-start)**.
-
-### Start a new project
-
-**Option 1: GitHub Template (recommended)**
-
-Click the green **"Use this template"** button at the top of this repo, name your project, then:
-
-```bash
-git clone https://github.com/yourorg/my-cool-app.git
-cd my-cool-app
-```
-
-**Option 2: Clone and reinitialize**
-
-```bash
-git clone https://github.com/backblaze-b2-samples/vibe-coding-starter-kit.git my-cool-app
-cd my-cool-app
-rm -rf .git
-git init
-git add .
-git commit -m "Initial commit from vibe-coding-starter-kit"
-```
-
-Either way you get a clean project with no upstream history — ready to push to your own repo and point your agent at it.
-
-### Setup
+You need: Node.js >= 20, pnpm >= 9, Python >= 3.11, and a free
+**[Backblaze B2 account](https://www.backblaze.com/sign-up/ai-cloud-storage?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-clip-nsfw-moderation)**.
 
 **1. Install dependencies**
 
@@ -98,7 +60,8 @@ Either way you get a clean project with no upstream history — ready to push to
 pnpm install
 ```
 
-**2. Set up the backend**
+**2. Set up the backend** (this installs PyTorch + TensorFlow, so it can take a
+few minutes and a few GB of disk)
 
 ```bash
 cd services/api
@@ -109,22 +72,22 @@ cd ../..
 
 **3. Add your B2 credentials**
 
-Set up your local `.env`:
-
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` in your editor and keep it visible. Then head to the [Backblaze B2 dashboard](https://secure.backblaze.com/b2_buckets.htm?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-oss-start) and:
+Open `.env`, then head to the
+[Backblaze B2 dashboard](https://secure.backblaze.com/b2_buckets.htm?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-clip-nsfw-moderation) and:
 
-1. **Create a bucket.** B2 will show two values — paste each into `.env`:
-   - **Bucket Unique Name** → `B2_BUCKET_NAME`
-   - **Endpoint** → `B2_ENDPOINT`
-2. **Create an application key** with `Read and Write` permission. B2 will show two values — paste each into `.env`:
-   - **keyID** → `B2_KEY_ID`
+1. **Create a bucket** and paste its **Unique Name** → `B2_BUCKET_NAME`. Read the
+   bucket's **Endpoint** (e.g. `s3.us-west-004.backblazeb2.com`) and paste just
+   the region segment → `B2_REGION` (e.g. `us-west-004`). The app derives the
+   S3 endpoint as `https://s3.{B2_REGION}.backblazeb2.com`.
+2. **Create an application key** with `Read and Write` permission:
+   - **keyID** → `B2_APPLICATION_KEY_ID`
    - **applicationKey** → `B2_APPLICATION_KEY` *(only shown once — paste it now)*
 
-> Want a walkthrough? See the docs for [creating a bucket](https://www.backblaze.com/docs/cloud-storage-create-and-manage-buckets) and [creating app keys](https://www.backblaze.com/docs/cloud-storage-create-and-manage-app-keys).
+> Walkthroughs: [creating a bucket](https://www.backblaze.com/docs/cloud-storage-create-and-manage-buckets?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-clip-nsfw-moderation) and [creating app keys](https://www.backblaze.com/docs/cloud-storage-create-and-manage-app-keys?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-clip-nsfw-moderation).
 
 **4. Run it**
 
@@ -132,43 +95,50 @@ Open `.env` in your editor and keep it visible. Then head to the [Backblaze B2 d
 pnpm dev
 ```
 
-That's it. Frontend at `localhost:3000`, API at `localhost:8000`. Upload a file and see it working. Interactive API docs (Swagger UI) are at `localhost:8000/docs`, with ReDoc at `/redoc`.
+Frontend at `localhost:3000`, API at `localhost:8000`. Go to **Batches → New
+batch**, add a few images, pick a threshold, create, then **Run scoring**. The
+first run downloads the CLIP weights and the LAION SavedModel (cached under
+`services/api/models/`), so it takes longer than subsequent runs.
 
-`pnpm dev` runs `pnpm doctor` first — a preflight check that catches the common setup gotchas (wrong Node/Python version, missing venv, missing or placeholder `.env`, ports already taken) and tells you exactly how to fix each one. Run it standalone any time with `pnpm doctor`.
+`pnpm dev` runs `pnpm doctor` first — a preflight check for the common setup
+gotchas (wrong Node/Python version, missing venv, missing or placeholder
+`.env`, ports already taken).
 
-## Building Your App
+### On-device model & devices
 
-When you adapt this kit for a new app, keep the shared scaffolding and only swap out what's app-specific:
+- **CLIP stage** runs on the first available of **CUDA → Apple MPS → CPU** and
+  defaults to CPU. A GPU is never required. Override with `MODERATION_DEVICE`.
+- **The LAION AutoKeras classifier always runs on CPU** (TensorFlow has weak MPS
+  support on macOS). The model is small, so this is fine.
+- On macOS arm64, the TensorFlow 2.15 + AutoKeras load path can be fragile; the
+  pinned versions in `requirements.txt` are the known-good line.
 
-- **Keep** the UI kit (`apps/web/src/components/ui/` + design tokens in `globals.css` + `/design`).
-- **Keep** the File Explorer (`/files`) and Upload (`/upload`) pages and their sidebar nav entries — they're the reusable B2-backed surface.
-- **Adapt** the Dashboard (`/`) to your use case — replace the default stats, chart, and recent uploads with metrics that reflect what your app actually does.
-- **Rebrand** by editing a single file: `apps/web/src/lib/app-config.ts` holds the app name and description (`APP_NAME`, `APP_DESCRIPTION`). Changing them there updates the page title, sidebar, and breadcrumb everywhere — no other files to touch.
+## Building on this project
 
-Full contract and rationale: [AGENTS.md §2 — Building on This Starter Kit](AGENTS.md#2-building-on-this-starter-kit).
+- **Keep** the UI kit (`apps/web/src/components/ui/` + design tokens in
+  `globals.css` + `/design`) and the full-bucket **Bucket** explorer (`/files`).
+- **Adapt** the Dashboard (`/`) — it shows moderation stats and recent batches.
+- **Rebrand** by editing `apps/web/src/lib/app-config.ts` (`APP_NAME`,
+  `APP_DESCRIPTION`).
+
+Full contract: [AGENTS.md §2](AGENTS.md#2-building-on-this-project).
 
 ## Core Features
 
-- [File Upload](docs/features/file-upload.md) — drag-and-drop upload with real-time progress
-- [File Browser](docs/features/file-browser.md) — list, preview, download, delete files
-- [Dashboard](docs/features/dashboard.md) — stats cards, upload chart, recent uploads
-- [Metadata Extraction](docs/features/metadata-extraction.md) — image dimensions, EXIF, PDF info, checksums
-- [Design System](docs/design-system.md) — tokens, primitives, AI elements, the blaze generating loader, and inline `ErrorState` / `EmptyState` patterns. Live preview at `/design`.
-- Inline error handling — fetch failures surface *what's wrong* (API offline, 401, 5xx) and offer a Retry, instead of silently rendering empty state.
-- Single-source config — one `.env` at the repo root powers both API and web app, validated at startup so misconfig fails fast with a readable message.
-- Centralized data layer — every fetch goes through TanStack Query hooks in `apps/web/src/lib/queries.ts`; cache invalidation is one call after a mutation.
-- Structural tests — verify layering rules, import boundaries, SDK containment, file size limits
-- Structured JSON logging — every request traced with `request_id` and timing
-- `/health` endpoint — B2 connectivity check
-- `/metrics` endpoint — Prometheus-format counters (request count, latency, uploads)
-- `/docs` + `/redoc` — auto-generated interactive API docs (toggle off in prod with `ENABLE_DOCS=false`)
-- Per-IP rate limiting and magic-byte upload validation — see [SECURITY.md](docs/SECURITY.md)
+- [Moderation Batches](docs/features/moderation-batches.md) — create/read/edit/delete/run the primary entity
+- [NSFW Scoring](docs/features/nsfw-scoring.md) — on-device CLIP + LAION classifier
+- [Routing & Quarantine](docs/features/routing-quarantine.md) — automatic approved/quarantine routing on B2
+- [Audit Logs](docs/features/audit-logs.md) — per-image `results.jsonl` + batch `summary.csv`
+- [Dashboard](docs/features/dashboard.md) — moderation stats and recent batches
+- [File Browser](docs/features/file-browser.md) — the raw full-bucket explorer
+- [Design System](docs/design-system.md) — tokens, primitives, error/empty states. Live preview at `/design`.
 
 ## Tech Stack
 
-- TypeScript, Next.js 16, React 19, Tailwind v4, shadcn/ui, Recharts
-- TanStack Query — caching, dedup, retry, stale-while-revalidate for every fetch
-- Python 3.11+, FastAPI, boto3, Pydantic v2, Pillow, PyPDF2
+- TypeScript, Next.js 16, React 19, Tailwind v4, shadcn/ui
+- TanStack Query — caching, dedup, retry for every fetch
+- Python 3.11+, FastAPI, boto3, Pydantic v2, Pillow
+- On-device ML: open_clip (CLIP ViT-L/14), PyTorch, TensorFlow 2.15 + AutoKeras (LAION NSFW classifier)
 - Backblaze B2 (S3-compatible object storage)
 - pnpm workspaces (monorepo)
 
@@ -185,7 +155,7 @@ Full contract and rationale: [AGENTS.md §2 — Building on This Starter Kit](AG
 | `pnpm test:web` | Run frontend unit tests (vitest) |
 | `pnpm test:api` | Run backend tests |
 | `pnpm check:structure` | Verify layering rules |
-| `pnpm test:e2e` | Playwright e2e tests (run `pnpm --filter @vibe-coding-starter-kit/web exec playwright install chromium` once first) |
+| `pnpm test:e2e` | Playwright e2e tests (run `pnpm --filter @clip-nsfw-image-moderation/web exec playwright install chromium` once first) |
 
 ## Documentation Map
 
@@ -193,17 +163,12 @@ Full contract and rationale: [AGENTS.md §2 — Building on This Starter Kit](AG
 |-----|---------|
 | [AGENTS.md](AGENTS.md) | Agent table of contents — start here |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System layout, layering, data flows |
-| [docs/features/](docs/features/) | Feature docs (upload, browser, dashboard, metadata) |
-| [docs/design-system.md](docs/design-system.md) | Design tokens, primitives, AI elements, loader, error/empty states |
+| [docs/features/](docs/features/) | Feature docs (batches, scoring, routing, audit, dashboard, file browser) |
 | [docs/app-workflows.md](docs/app-workflows.md) | User journeys |
 | [docs/dev-workflows.md](docs/dev-workflows.md) | Engineering workflows and testing |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security principles |
 | [docs/RELIABILITY.md](docs/RELIABILITY.md) | Reliability expectations |
 | [docs/exec-plans/](docs/exec-plans/) | Execution plans and tech debt tracker |
-
-## Contributing
-
-Start with [AGENTS.md](AGENTS.md). It's the map — everything else is discoverable from there.
 
 ## License
 
@@ -211,6 +176,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Claude Agent B2 Skill
 
-Manage Backblaze B2 from your terminal using natural language (list/search, audits, stale or large file detection, security checks, safe cleanup).
+Manage Backblaze B2 from your terminal using natural language (list/search,
+audits, stale or large file detection, security checks, safe cleanup).
 
 Repo: [https://github.com/backblaze-b2-samples/claude-skill-b2-cloud-storage](https://github.com/backblaze-b2-samples/claude-skill-b2-cloud-storage)

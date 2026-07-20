@@ -2,11 +2,28 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    b2_endpoint: str = "https://s3.us-west-004.backblazeb2.com"
-    b2_key_id: str = ""
+    # Backblaze B2 (S3-compatible). Standard #3 env names — the S3 endpoint is
+    # DERIVED from the region rather than pasted as a literal URL, so there is
+    # never a hardcoded region string in source.
+    b2_application_key_id: str = ""
     b2_application_key: str = ""
     b2_bucket_name: str = ""
-    b2_public_url: str = ""
+    b2_region: str = ""
+    b2_public_url_base: str = ""
+
+    # --- Moderation pipeline (app-specific, non-secret) ---
+    # Default safety threshold (score >= threshold => quarantine). Matches the
+    # "Balanced" preset surfaced in the batch create form.
+    moderation_default_threshold: float = 0.70
+    # CLIP backbone + pretrained weights for the image embedding stage.
+    clip_model_name: str = "ViT-L-14"
+    clip_pretrained: str = "openai"
+    # Where the LAION AutoKeras NSFW SavedModel is cached on first run.
+    nsfw_model_dir: str = "models"
+    # Torch device for the CLIP stage: "auto" resolves CUDA -> Apple MPS -> CPU.
+    # The TensorFlow/AutoKeras classifier always runs on CPU (weak TF-MPS
+    # support on macOS). Never hard-requires a GPU.
+    moderation_device: str = "auto"
 
     api_port: int = 8000
     # Interactive API docs (/docs, /redoc, /openapi.json). On by default for
@@ -45,6 +62,13 @@ class Settings(BaseSettings):
     download_count_file: str = "data/download_count.json"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
+    @property
+    def b2_endpoint(self) -> str:
+        """Derive the S3 endpoint from the region (no hardcoded region in source)."""
+        if not self.b2_region:
+            return ""
+        return f"https://s3.{self.b2_region}.backblazeb2.com"
 
     @property
     def cors_origins(self) -> list[str]:

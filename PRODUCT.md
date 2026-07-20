@@ -6,28 +6,28 @@ product
 
 ## Users
 
-AI coding agents and "vibe coders" (developers who lean on AI to move fast) who clone
-this kit as the foundation for a new full-stack app. Their context: they want to skip
-the boilerplate loop (dashboard, upload, file browser, cloud storage wiring) and go
-straight to building their app's unique features. They read the repo, keep the shared
-scaffolding, and rebrand + rewrite the dashboard for their own use case.
+Trust-&-safety and ML-data engineers at UGC platforms, social networks, and dataset
+marketplaces that ingest large volumes of user-submitted or crawled images. Their
+context: they need bulk NSFW triage but cannot (or will not) ship image bytes to a
+third-party moderation API — for privacy, cost, or compliance reasons. They want an
+on-device pipeline they can run with only B2 credentials, inspect, and extend.
 
 ## Product Purpose
 
-A production-ready full-stack starter kit (Next.js 16 + React 19 + Tailwind v4 +
-shadcn/ui frontend, FastAPI backend) with Backblaze B2 cloud storage integrated out of
-the box. It ships a dashboard, drag-and-drop upload, and a file browser so builders
-start from a working app, not a blank page. Success = a builder can clone it, run it,
-rebrand it via one config file, and trust every screen enough to build on top without
-first fixing it.
+A self-hosted, on-device content-moderation pipeline. It scores every image 0–1
+(1 = NSFW) using LAION-AI's CLIP-based NSFW Detector (CLIP ViT-L/14 embeddings ->
+AutoKeras safety classifier), entirely on the operator's hardware. Backblaze B2 is the
+staging, routing, quarantine, and audit-log store: images are ingested, scored, routed
+to approved/quarantine, and logged for compliance review. Success = an operator can
+point it at a bucket, create a batch, run it, and trust the routing + audit trail
+without shipping a single image to an external service.
 
 ## Brand Personality
 
-Confident, precise, quietly professional. Voice is direct and free of hype ("Stop
-wiring boilerplate and start building"). The interface should feel like a modern
-developer tool — considered, calm, trustworthy — not a marketing showpiece. It is a
-**neutral foundation** that others rebrand: the design carries craft through restraint,
-not through a strong opinionated identity of its own.
+Confident, precise, quietly professional. Voice is direct and free of hype. The
+interface should feel like a modern developer tool — considered, calm, trustworthy —
+built for people who review sensitive content and need the tool to stay out of the way.
+It is built on a neutral foundation whose design carries craft through restraint.
 
 ## Anti-references
 

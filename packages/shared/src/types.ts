@@ -57,3 +57,59 @@ export interface UploadStats {
   uploads_today: number;
   total_downloads: number;
 }
+
+// --- Moderation batches ---
+
+export type BatchStatus = "pending" | "completed";
+export type Verdict = "approved" | "quarantine";
+
+export interface BatchImage {
+  filename: string;
+  key: string;
+  source: string | null;
+  ingested_at: string | null;
+  score: number | null;
+  verdict: Verdict | null;
+}
+
+export interface BatchSummary {
+  id: string;
+  name: string;
+  threshold: number;
+  status: BatchStatus;
+  created_at: string;
+  updated_at: string;
+  last_run_at: string | null;
+  image_count: number;
+  approved_count: number;
+  quarantined_count: number;
+}
+
+export interface BatchDetail extends BatchSummary {
+  images: BatchImage[];
+}
+
+export interface BatchCreateResult {
+  id: string;
+  name: string;
+  threshold: number;
+  image_count: number;
+}
+
+export interface BatchRunResult {
+  id: string;
+  scored: number;
+  approved: number;
+  quarantined: number;
+  threshold: number;
+  results_key: string;
+  summary_key: string;
+}
+
+export interface ModerationStats {
+  total_batches: number;
+  pending_batches: number;
+  images_scored: number;
+  approved: number;
+  quarantined: number;
+}
