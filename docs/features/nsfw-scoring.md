@@ -39,7 +39,15 @@ third-party moderation API and no second API key.
 - Heavy ML imports are deferred to call time so the app and tests import without the ML stack
 
 ## UX States
-- The run action shows "Scoring on-device…" while `run_batch` executes
+- While `run_batch` executes, the "Run scoring" button swaps its `Play` icon for
+  an animated `Loader2` spinner, relabels to "Scoring on-device…", and goes
+  disabled (`aria-busy`). A helper line under the button sets the expectation
+  honestly: the first run per server boot loads the CLIP + LAION models into
+  memory (~30s) before scoring, so a single pass can take 15–45s.
+- The batch-detail Summary status badge shows a spinning "running" state for the
+  duration. This is derived live from the run mutation (`useIsMutating` keyed by
+  `qk.runBatch(id)`) — it is UI state, not a backend status; the persisted
+  `status` stays `pending`/`completed`.
 
 ## Verification
 - Test files: `services/api/tests/test_batches.py` (`test_run_routes_by_threshold` monkeypatches the scorer; `test_score_images_empty_is_noop` guards the ML-free path)

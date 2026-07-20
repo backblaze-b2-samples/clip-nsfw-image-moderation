@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Play, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Play, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -52,14 +52,33 @@ export function RunPanel({ batch }: { batch: BatchDetail }) {
         <CardTitle className="card-title">Actions</CardTitle>
       </CardHeader>
       <CardContent className="p-5 space-y-3">
-        <Button className="w-full" onClick={onRun} disabled={runMutation.isPending}>
-          <Play className="h-4 w-4" />
+        <Button
+          className="w-full"
+          onClick={onRun}
+          disabled={runMutation.isPending}
+          aria-busy={runMutation.isPending}
+        >
+          {runMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <Play className="h-4 w-4" aria-hidden />
+          )}
           {runMutation.isPending
             ? "Scoring on-device…"
             : batch.status === "completed"
               ? "Re-run scoring"
               : "Run scoring"}
         </Button>
+        {runMutation.isPending && (
+          <p
+            className="text-xs text-muted-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            Scoring on-device… the first run loads the model into memory
+            (~30s), then scores each image. This can take 15–45s — hang tight.
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">
           Loads every image from B2, scores it with CLIP + the LAION classifier,
           then routes it to <code>approved/</code> or <code>quarantine/</code> and

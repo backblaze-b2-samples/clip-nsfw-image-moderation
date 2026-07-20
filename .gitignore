@@ -50,5 +50,8 @@ test-results/
 # Local runtime data (download counter, etc.)
 services/api/data/
 
+# Downloaded ML model cache (LAION AutoKeras SavedModel; fetched on first run)
+services/api/models/
+
 # Local-only working area (machine/user-specific)
 .local/

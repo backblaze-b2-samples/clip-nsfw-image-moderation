@@ -37,6 +37,8 @@ export const qk = {
   health: () => [...qk.all, "health"] as const,
   batches: () => [...qk.all, "batches"] as const,
   batch: (id: string) => [...qk.all, "batches", id] as const,
+  runBatch: (id: string) => [...qk.all, "batches", id, "run"] as const,
+  batchLogs: (id: string) => [...qk.all, "batches", id, "logs"] as const,
   moderationStats: () => [...qk.all, "batches", "stats"] as const,
 };
 
@@ -145,7 +147,22 @@ export function useDeleteBatch() {
 export function useRunBatch(id: string) {
   const qc = useQueryClient();
   return useMutation({
+    // Tagged so decoupled components (e.g. the batch-detail status badge) can
+    // observe an in-flight run via `useIsMutating` without prop-drilling.
+    mutationKey: qk.runBatch(id),
     mutationFn: () => runBatch(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.all }),
+  });
+}
+
+// Lists just this batch's audit artifacts (results.jsonl, summary.csv,
+// manifest.json) by scoping the file listing to `moderation/logs/<id>/`.
+// `enabled` gates the call to batches that have actually run. Invalidated
+// alongside everything else by useRunBatch's `qk.all` invalidation.
+export function useBatchLogs(id: string | undefined, enabled: boolean) {
+  return useQuery<FileMetadata[], ApiError>({
+    queryKey: qk.batchLogs(id ?? ""),
+    queryFn: () => getFiles(`moderation/logs/${id}/`, 100),
+    enabled: enabled && !!id,
   });
 }

@@ -18,6 +18,10 @@ User journeys inside the application.
 ## Run a Batch (score → route → audit)
 
 - On `/batches/[id]`, user clicks **Run scoring**
+- While it runs, the button shows a spinner + "Scoring on-device…" with a helper
+  line (the first run loads the model, ~30s, so a pass can take 15–45s), and the
+  Summary status badge shows a spinning "running" state — so a long wait reads as
+  "working", not "hung"
 - The API loads every image from B2, scores it on-device (CLIP + LAION), then
   routes it: safe → `images/approved/<id>/`, flagged → `images/quarantine/<id>/`
   (copy-then-delete; incoming originals removed after routing)
@@ -25,6 +29,10 @@ User journeys inside the application.
   `moderation/logs/<id>/`
 - The detail view refreshes with per-image score, verdict badge, and thumbnail;
   a toast reports totals
+- The **Audit log** panel on the detail page lists this batch's log files
+  (`results.jsonl`, `summary.csv`, `manifest.json`) with per-file Download
+  buttons — a direct in-app path to the logs without opening the raw bucket
+  explorer
 - Re-running after editing the threshold re-routes with the new cutoff
 - See: [NSFW Scoring](features/nsfw-scoring.md), [Routing & Quarantine](features/routing-quarantine.md), [Audit Logs](features/audit-logs.md)
 

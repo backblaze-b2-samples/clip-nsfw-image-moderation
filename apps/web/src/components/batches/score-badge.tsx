@@ -1,3 +1,5 @@
+import { Loader2 } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import type { Verdict } from "@clip-nsfw-image-moderation/shared";
 
@@ -28,7 +30,24 @@ export function VerdictBadge({ verdict }: { verdict: Verdict | null }) {
   );
 }
 
-export function StatusBadge({ status }: { status: string }) {
+export function StatusBadge({
+  status,
+  running = false,
+}: {
+  status: string;
+  running?: boolean;
+}) {
+  // `running` is derived from the live run mutation, not a backend status —
+  // it reflects an in-flight on-device scoring pass while `status` is still
+  // whatever the last persisted run left behind.
+  if (running) {
+    return (
+      <Badge variant="outline" className="gap-1" aria-live="polite">
+        <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+        running
+      </Badge>
+    );
+  }
   if (status === "completed") {
     return <Badge variant="secondary">completed</Badge>;
   }

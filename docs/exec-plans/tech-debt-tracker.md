@@ -47,3 +47,15 @@ Known tech debt items. Agents update this when they discover or create tech debt
 | Custom `FileNotFoundError` shadowed the built-in | Renamed to `FileNotFoundServiceError` |
 | Dropzone accepted any file type client-side | `accept` allow-list mirroring backend `ALLOWED_TYPES` (tested for drift) |
 | No test harness for feature specs | pytest suite across upload, files, activity, errors, validation, rate limit, pagination |
+
+## 2026-07-20 — verify (UX nitpicks, gate-demoted)
+
+Surviving nitpicks from an autonomous UI verify run (3-lens funnel). Backlog only — none block the moderation goal, which was verified end-to-end (default Balanced 0.70 all-approved + non-default Strict 0.50 approved/quarantine split, cross-surface agreement, real media painted).
+
+- Batch detail → Audit log panel — files (`results.jsonl` / `summary.csv` / `manifest.json`) are Download-only → no inline/expandable preview in-app; a user must download + open elsewhere to read the audit trail. Per-image verdicts are shown inline, so the intent is covered. (shot `.local/verify/r2A/07-results-routing-audit.png`)
+- Batch detail → "Run scoring" in-progress — has an animated spinner + a "running" badge + honest ETA text, but no determinate/advancing progress bar on the ~30s wait (dominated by one-time model load). A determinate bar or per-image step counter would be nicer (an adversarial gate demoted this from friction → nitpick). (shot `.local/verify/r2B/06-scoring-in-progress.png`)
+- Batch detail immediately after create — 4/6 preview thumbnails render blank for ~2s (presigned-URL load timing) with a few transient browser-console 404s while objects move `incoming/ → approved/quarantine/` (copy-then-delete); self-heals once scoring completes, no API-log errors. (shot `.local/verify/A/04-batch-created-detail.png`)
+
+## 2026-07-20 — verify (correction to an Open item)
+
+- The Open item "TensorFlow 2.15 + AutoKeras load path is fragile on macOS arm64" was verified this run: scoring runs **in-process on macOS arm64 (MPS)** with no native hang. The actual fresh-install failure was an **unpinned `keras-nlp`/`keras-hub`** resolving to 0.18.x (Keras-3 `keras.ops`) and crashing `import autokeras` under the Keras-2.15 that TF 2.15 ships — now fixed by pinning `keras-nlp>=0.7.0,<0.8` in `requirements.txt`. The container fallback is no longer required on this arch/wheel line; keep the item only as a portability contingency for other arm64 wheels.

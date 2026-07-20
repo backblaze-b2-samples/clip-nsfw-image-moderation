@@ -37,12 +37,19 @@ compliance review.
 
 ## UX States
 - The run toast reports totals; the detail page's summary card shows approved/quarantined and last-run time
+- The batch-detail page has an **Audit log** panel that lists this batch's log
+  artifacts (`results.jsonl`, `summary.csv`, `manifest.json`) with a per-file
+  Download button — an in-app path straight to a batch's logs, so an operator no
+  longer has to hunt through the raw full-bucket explorer. It is scoped to
+  `moderation/logs/<id>/` via the `useBatchLogs` hook (prefix-filtered file
+  listing) and downloads through the existing presigned-URL path. Before a batch
+  has run, the panel explains that running it generates the log.
 
 ## Verification
 - Test files: `services/api/tests/test_batches.py` (`test_run_routes_by_threshold` asserts manifest/status updates)
 - Required cases: results + summary written, manifest updated
 - Quick verify command: `pnpm test:api`
-- Full verify command: run a batch, download `moderation/logs/<id>/summary.csv` from the bucket explorer and confirm totals
+- Full verify command: run a batch, then from the batch-detail **Audit log** panel download `summary.csv` (or open it from the bucket explorer) and confirm totals
 - Pass criteria: audit artifacts present and consistent with the run result
 
 ## Related Docs

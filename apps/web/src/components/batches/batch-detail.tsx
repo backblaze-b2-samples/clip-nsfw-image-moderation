@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { ImageIcon } from "lucide-react";
+import { useIsMutating } from "@tanstack/react-query";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,9 +14,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { usePreviewUrl } from "@/lib/queries";
+import { qk, usePreviewUrl } from "@/lib/queries";
 import { formatDate } from "@/lib/utils";
 import type { BatchDetail, BatchImage } from "@clip-nsfw-image-moderation/shared";
+import { AuditLogPanel } from "./audit-log-panel";
 import { ScoreBadge, StatusBadge, VerdictBadge } from "./score-badge";
 
 function Thumb({ image }: { image: BatchImage }) {
@@ -58,12 +60,18 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 }
 
 export function BatchDetailView({ batch }: { batch: BatchDetail }) {
+  // Reflect an in-flight scoring pass in the badge without prop-drilling the
+  // run mutation across sibling panels — `useRunBatch` tags its mutation with
+  // `qk.runBatch(id)`, so this observes it live.
+  const isRunning =
+    useIsMutating({ mutationKey: qk.runBatch(batch.id) }) > 0;
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader className="border-b border-border py-4 px-5 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="card-title">Summary</CardTitle>
-          <StatusBadge status={batch.status} />
+          <StatusBadge status={batch.status} running={isRunning} />
         </CardHeader>
         <CardContent className="p-5">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -130,6 +138,8 @@ export function BatchDetailView({ batch }: { batch: BatchDetail }) {
           )}
         </CardContent>
       </Card>
+
+      <AuditLogPanel batch={batch} />
     </div>
   );
 }
