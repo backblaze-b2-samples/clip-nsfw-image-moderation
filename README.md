@@ -12,6 +12,24 @@ is the staging, routing, quarantine, and audit-log store for the whole flow.
 
 No second API key — **B2 credentials only.**
 
+## What it looks like
+
+**Dashboard** — moderation totals (batches, images scored, approved, quarantined) above a recent-batches table.
+
+![Dashboard with moderation totals and recent batches](docs/images/dashboard.png)
+
+**Moderation batches** — every batch with its status, safety threshold, and approved-vs-quarantined routing at a glance.
+
+![Moderation batches list with status, threshold, and routing counts](docs/images/batches-list.png)
+
+**Batch detail** — per-image NSFW scores and approved/quarantine verdicts, plus the audit log (manifest, summary CSV, results JSONL) written to B2.
+
+![Batch detail showing per-image scores, verdicts, and the audit log](docs/images/batch-detail.png)
+
+**New batch** — name the batch, pick a safety-threshold preset, and drop in the images to moderate.
+
+![New batch form with name, threshold preset, and image dropzone](docs/images/new-batch.png)
+
 **What you get out of the box:**
 - On-device NSFW scoring (CLIP ViT-L/14 + LAION AutoKeras classifier), CPU by
   default with CUDA → Apple MPS → CPU autodetect
